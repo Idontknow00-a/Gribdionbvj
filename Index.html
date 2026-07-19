@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Gifts</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); min-height:100vh; padding:20px; color:#e0e0e0; }
+        .container { max-width:900px; margin:0 auto; }
+        h1 { text-align:center; margin-bottom:5px; font-size:24px; color:#fff; }
+        .subtitle { text-align:center; color:#aaa; margin-bottom:20px; font-size:13px; }
+
+        .main-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+        .main-tab { padding:10px 18px; border-radius:20px; background:#2a2a4a; cursor:pointer; font-size:13px; transition:all 0.3s; border:none; color:#ccc; flex:1; min-width:100px; text-align:center; }
+        .main-tab.active { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white; }
+
+        .section { display:none; }
+        .section.active { display:block; }
+
+        .card { background:#1e1e3a; border-radius:15px; padding:20px; margin-bottom:15px; border:1px solid #2a2a4a; }
+        .card h3 { color:#fff; margin-bottom:15px; font-size:16px; display:flex; align-items:center; gap:8px; }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(95px,1fr)); gap:8px; margin-bottom:15px; }
+        .stat-item { background:#2a2a4a; padding:12px 8px; border-radius:10px; text-align:center; cursor:pointer; transition:all 0.2s; border:2px solid transparent; }
+        .stat-item:hover { border-color:#667eea; }
+        .stat-item.selected { border-color:#ff9800; background:#3a2a1a; }
+        .stat-number { font-size:22px; font-weight:bold; color:#667eea; }
+        .stat-label { font-size:10px; color:#aaa; margin-top:3px; }
+
+        .btn { padding:10px 20px; border-radius:20px; font-size:13px; cursor:pointer; transition:all 0.2s; border:none; font-weight:bold; }
+        .btn-primary { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white; }
+        .btn-success { background:linear-gradient(135deg,#4caf50 0%,#45a049 100%); color:white; }
+        .btn-warning { background:linear-gradient(135deg,#ff9800 0%,#f57c00 100%); color:white; }
+        .btn-danger { background:linear-gradient(135deg,#f44336 0%,#e91e63 100%); color:white; }
+        .btn-copy { background:linear-gradient(135deg,#00bcd4 0%,#0097a7 100%); color:white; }
+        .btn-small { padding:5px 12px; font-size:11px; }
+        .btn:active { transform:scale(0.95); }
+        .btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+        .input-row { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center; }
+        .input-row input, .input-row textarea { 
+            background:#2a2a4a; border:1px solid #3a3a5a; color:#fff; padding:10px 15px; 
+            border-radius:10px; font-size:14px; outline:none; 
+        }
+        .input-row input:focus, .input-row textarea:focus { border-color:#667eea; }
+        .input-row input { flex:1; min-width:100px; }
+        .input-row textarea { width:100%; resize:vertical; min-height:70px; }
+
+        .upload-area { border:2px dashed #3a3a5a; border-radius:12px; padding:25px; text-align:center; cursor:pointer; transition:all 0.3s; background:#1a1a35; margin-bottom:15px; }
+        .upload-area:hover { border-color:#667eea; background:#1e1e40; }
+        .upload-icon { font-size:36px; margin-bottom:10px; }
+        .file-input { display:none; }
+
+        .list-item { background:#2a2a4a; padding:8px 12px; margin-bottom:4px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:12px; }
+        .list-item.usado { background:#1a2a1a; border-left:3px solid #4caf50; opacity:0.8; }
+        .list-code { font-family:monospace; background:#1a1a35; padding:2px 8px; border-radius:4px; font-size:11px; word-break:break-all; }
+        .list-badge { padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; }
+        .badge-tipo { background:#2a1a4a; color:#b39ddb; }
+
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center; }
+        .modal-overlay.active { display:flex; }
+        .modal { background:#1e1e3a; padding:25px; border-radius:15px; max-width:550px; width:95%; border:1px solid #3a3a5a; max-height:90vh; overflow-y:auto; }
+        .modal h3 { color:#fff; margin-bottom:15px; }
+        .modal-buttons { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; }
+
+        .result-box { background:#111; border:1px solid #333; border-radius:8px; padding:12px; font-family:'Courier New',monospace; font-size:12px; color:#4caf50; max-height:250px; overflow-y:auto; white-space:pre-wrap; line-height:1.5; margin-top:10px; }
+
+        .checkbox-inline { display:flex; align-items:center; gap:6px; font-size:12px; color:#aaa; }
+        .checkbox-inline input { width:16px; height:16px; }
+
+        .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:12px 25px; border-radius:25px; font-size:14px; z-index:2000; opacity:0; transition:opacity 0.3s; }
+        .toast.show { opacity:1; }
+
+        .empty-state { text-align:center; padding:30px; color:#666; font-size:14px; }
+
+        .nota-tag { font-size:10px; color:#ff9800; margin-top:3px; font-style:italic; }
+
+        @media (max-width:600px) { 
+            .container{padding:10px;} 
+            .stats-grid{grid-template-columns:repeat(2,1fr);} 
+            .input-row{flex-direction:column;}
+            .modal{width:100%;border-radius:0;}
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎁 Gerenciador de Gifts</h1>
+        <p class="subtitle">Adicione • Organize • Pegue • Controle</p>
+
+        <div class="main-tabs">
+            <button class="main-tab active" onclick="mudarSecao('estoque')">📦 Estoque</button>
+            <button class="main-tab" onclick="mudarSecao('adicionar')">➕ Adicionar</button>
+            <button class="main-tab" onclick="mudarSecao('utilizados')">✅ Utilizados</button>
+        </div>
+
+        <div class="toast" id="toast"></div>
+
+        <!-- ==================== MODAL PEGAR ==================== -->
+        <div class="modal-overlay" id="modalPegar">
+            <div class="modal">
+                <h3>🎯 Pegar Gifts</h3>
+                
+                <div class="stats-grid" id="modalTipos"></div>
+                
+                <div class="input-row">
+                    <label style="color:#aaa;white-space:nowrap;">Quantidade:</label>
+                    <input type="number" id="modalQtd" value="1" min="1" style="width:70px;" onchange="atualizarPreview()">
+                    <span style="color:#aaa;font-size:12px;" id="modalDisponivel"></span>
+                </div>
+                
+                <div class="checkbox-inline" style="margin-bottom:10px;">
+                    <input type="checkbox" id="modalCrase" checked onchange="atualizarPreview()">
+                    <label for="modalCrase">Adicionar ` no início e fim</label>
+                </div>
+                
+                <textarea id="modalNota" placeholder="📝 Nota (ex: Vendido para fulano...)" style="width:100%;background:#2a2a4a;border:1px solid #3a3a5a;color:#fff;padding:10px;border-radius:10px;font-size:13px;resize:vertical;min-height:50px;"></textarea>
+                
+                <div class="result-box" id="modalPreview">Selecione um tipo e quantidade...</div>
+                
+                <div class="modal-buttons">
+                    <button class="btn btn-copy" id="modalBtnCopiar" onclick="copiarPreview()" disabled>📋 Copiar</button>
+                    <button class="btn" onclick="fecharModal()">Cancelar</button>
+                    <button class="btn btn-success" id="modalConfirmar" onclick="confirmarPegar()" disabled>✅ Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SEÇÃO ESTOQUE ==================== -->
+        <div class="section active" id="secao-estoque">
+            <div class="card">
+                <h3>📦 Gifts Disponíveis</h3>
+                <div class="stats-grid" id="statsEstoque"></div>
+                
+                <div class="input-row">
+                    <input type="number" id="qtdPegar" placeholder="Qtd" min="1" value="1" style="width:70px;">
+                    <button class="btn btn-warning" onclick="abrirModalPegar()">🎯 Pegar Gifts</button>
+                    <button class="btn btn-copy" onclick="copiarTodos()">📋 Copiar Todos</button>
+                </div>
+
+                <div id="listaEstoque" style="max-height:400px;overflow-y:auto;"></div>
+
+                <!-- BOTÕES LIMPAR -->
+                <div style="margin-top:15px; display:flex; gap:8px; justify-content:flex-end;">
+                    <button class="btn btn-danger" onclick="limparEstoque()">🗑️ Limpar Estoque</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SEÇÃO ADICIONAR ==================== -->
+        <div class="section" id="secao-adicionar">
+            <div class="card">
+                <h3>➕ Adicionar Gifts</h3>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <div>Upload arquivo CSV</div>
+                    <div style="font-size:11px;color:#888;">Ou cole abaixo</div>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept=".csv" onchange="processarUpload(event)">
+                
+                <textarea id="inputManual" placeholder="Cole os códigos aqui, um por linha..." style="width:100%;background:#2a2a4a;border:1px solid #3a3a5a;color:#fff;padding:12px;border-radius:10px;font-size:13px;resize:vertical;min-height:120px;"></textarea>
+                <button class="btn btn-primary" onclick="adicionarManualmente()" style="width:100%;margin-top:8px;">➕ Adicionar ao Estoque</button>
+                <div style="margin-top:8px;font-size:11px;color:#888;">⚠️ Duplicados e já utilizados são ignorados automaticamente</div>
+            </div>
+        </div>
+
+        <!-- ==================== SEÇÃO UTILIZADOS ==================== -->
+        <div class="section" id="secao-utilizados">
+            <div class="card">
+                <h3>✅ Gifts Utilizados</h3>
+                <div class="stats-grid" id="statsUtilizados"></div>
+                <div id="listaUtilizados"></div>
+
+                <!-- BOTÕES LIMPAR -->
+                <div style="margin-top:15px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                    <button class="btn btn-danger" onclick="limparUtilizados()">🗑️ Limpar Histórico</button>
+                    <button class="btn btn-danger" onclick="limparTudo()" style="background:linear-gradient(135deg,#d32f2f 0%,#b71c1c 100%);">⚠️ Limpar TUDO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_ESTOQUE = 'gerenciador_estoque';
+        const STORAGE_UTILIZADOS = 'gerenciador_utilizados';
+
+        let estoque = [];
+        let utilizados = [];
+        let tipoSelecionado = null;
+        let giftsSelecionados = [];
+
+        const TIPOS = ['CARREFOUR', 'KOPENHAGEN', 'RENNER', 'CACAU_SHOW', 'SHELL', 'CEA', 'IFOOD'];
+        const ICONES = { 'CARREFOUR':'🏪', 'KOPENHAGEN':'🍫', 'RENNER':'👗', 'CACAU_SHOW':'🍫', 'SHELL':'🐚', 'CEA':'👕', 'IFOOD':'🍕' };
+
+        function init() {
+            carregarDados();
+            mostrarEstoque();
+        }
+
+        function carregarDados() {
+            estoque = JSON.parse(localStorage.getItem(STORAGE_ESTOQUE) || '[]');
+            utilizados = JSON.parse(localStorage.getItem(STORAGE_UTILIZADOS) || '[]');
+        }
+
+        function salvarDados() {
+            localStorage.setItem(STORAGE_ESTOQUE, JSON.stringify(estoque));
+            localStorage.setItem(STORAGE_UTILIZADOS, JSON.stringify(utilizados));
+        }
+
+        // ============ IDENTIFICAÇÃO ============
+        function identificarTipo(codigo) {
+            if (!codigo || codigo === 'SEM_CODIGO' || codigo === 'N/A' || 
+                codigo === 'disponibilizado' || codigo === 'ERRO_RESGATE' || 
+                codigo === 'nan' || codigo === '') return null;
+            
+            const c = codigo.toString().trim().toUpperCase();
+            if (c === 'INSTITUCIONAL' || c === 'N/A') return null;
+            
+            if (c.includes('PIN:')) {
+                const partes = c.split('PIN:');
+                const base = partes[0].trim();
+                const pin = partes[1] ? partes[1].trim() : '';
+                if (/^\d{16}$/.test(base) && /^\d{6}$/.test(pin)) return 'KOPENHAGEN';
+                if (/^\d{16}$/.test(base) && /^\d{4}$/.test(pin)) return 'CARREFOUR';
+                if (/^\d{21}$/.test(base)) return 'RENNER';
+                if (/^\d{16}$/.test(base)) return 'CARREFOUR';
+            }
+            
+            const len = c.length;
+            if (len === 9 && /^[A-Z0-9]{9}$/.test(c)) return 'CACAU_SHOW';
+            if (len === 10 && /^[A-Z0-9]{10}$/.test(c)) return 'SHELL';
+            if (len === 14 && /^[A-Z0-9]{14}$/.test(c)) return 'IFOOD';
+            if (len === 16 && /^[A-Z0-9]{16}$/.test(c) && !/^\d{16}$/.test(c)) return 'CEA';
+            
+            return null;
+        }
+
+        function isCodigoUtilizado(codigo) {
+            return utilizados.some(u => u.codigo === codigo);
+        }
+
+        function isCodigoNoEstoque(codigo) {
+            return estoque.some(e => e.codigo === codigo);
+        }
+
+        // ============ ADICIONAR ============
+        function adicionarGifts(listaCodigos) {
+            let adicionados = 0, ignoradosDuplicados = 0, ignoradosUtilizados = 0, ignoradosInvalidos = 0;
+
+            listaCodigos.forEach(codigo => {
+                codigo = codigo.trim();
+                if (!codigo) return;
+
+                const tipo = identificarTipo(codigo);
+                if (!tipo) { ignoradosInvalidos++; return; }
+                if (isCodigoUtilizado(codigo)) { ignoradosUtilizados++; return; }
+                if (isCodigoNoEstoque(codigo)) { ignoradosDuplicados++; return; }
+
+                estoque.push({ codigo, tipo, data_adicionado: new Date().toISOString() });
+                adicionados++;
+            });
+
+            salvarDados();
+            mostrarEstoque();
+
+            let msg = `✅ ${adicionados} adicionados`;
+            if (ignoradosDuplicados > 0) msg += ` | 🔄 ${ignoradosDuplicados} já no estoque`;
+            if (ignoradosUtilizados > 0) msg += ` | ✅ ${ignoradosUtilizados} já utilizados`;
+            if (ignoradosInvalidos > 0) msg += ` | ❌ ${ignoradosInvalidos} inválidos`;
+            mostrarToast(msg);
+        }
+
+        function processarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const texto = e.target.result;
+                const linhas = texto.split('\n');
+                const codigos = [];
+                for (let i = 1; i < linhas.length; i++) {
+                    if (!linhas[i].trim()) continue;
+                    const campos = parseCSV(linhas[i]);
+                    campos.forEach(c => {
+                        const limpo = c.replace(/"/g, '').trim();
+                        if (limpo && limpo !== 'SEM_CODIGO' && limpo !== 'N/A' && 
+                            limpo !== 'nan' && limpo !== 'disponibilizado' && 
+                            limpo !== 'ERRO_RESGATE' && limpo !== 'Institucional') {
+                            codigos.push(limpo);
+                        }
+                    });
+                }
+                adicionarGifts([...new Set(codigos)]);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(linha) {
+            const campos = [];
+            let atual = '', dentroAspas = false;
+            for (let char of linha) {
+                if (char === '"') dentroAspas = !dentroAspas;
+                else if (char === ',' && !dentroAspas) { campos.push(atual); atual = ''; }
+                else atual += char;
+            }
+            campos.push(atual);
+            return campos;
+        }
+
+        function adicionarManualmente() {
+            const texto = document.getElementById('inputManual').value;
+            if (!texto.trim()) { mostrarToast('📭 Cole os códigos primeiro'); return; }
+            const codigos = texto.split('\n').map(l => l.trim()).filter(l => l);
+            adicionarGifts(codigos);
+            document.getElementById('inputManual').value = '';
+        }
+
+        // ============ PEGAR GIFTS ============
+        function abrirModalPegar() {
+            tipoSelecionado = null;
+            giftsSelecionados = [];
+            
+            const tiposCount = {};
+            estoque.forEach(g => { tiposCount[g.tipo] = (tiposCount[g.tipo] || 0) + 1; });
+            
+            let html = '';
+            Object.entries(tiposCount).sort((a,b) => b[1]-a[1]).forEach(([tipo, count]) => {
+                html += `<div class="stat-item" id="modalTipo-${tipo}" onclick="selecionarTipoModal('${tipo}')">
+                    <div class="stat-number">${count}</div>
+                    <div class="stat-label">${ICONES[tipo]||'🎁'} ${tipo.replace('_',' ')}</div>
+                </div>`;
+            });
+            
+            document.getElementById('modalTipos').innerHTML = html || '<div class="empty-state">📭 Estoque vazio</div>';
+            document.getElementById('modalQtd').value = document.getElementById('qtdPegar').value || 1;
+            document.getElementById('modalNota').value = '';
+            document.getElementById('modalPreview').textContent = 'Selecione um tipo acima...';
+            document.getElementById('modalBtnCopiar').disabled = true;
+            document.getElementById('modalConfirmar').disabled = true;
+            document.getElementById('modalDisponivel').textContent = '';
+            
+            document.getElementById('modalPegar').classList.add('active');
+            
+            const primeiro = Object.keys(tiposCount)[0];
+            if (primeiro) selecionarTipoModal(primeiro);
+        }
+
+        function selecionarTipoModal(tipo) {
+            tipoSelecionado = tipo;
+            document.querySelectorAll('#modalPegar .stat-item').forEach(el => el.classList.remove('selected'));
+            const el = document.getElementById('modalTipo-' + tipo);
+            if (el) el.classList.add('selected');
+            atualizarPreview();
+        }
+
+        function atualizarPreview() {
+            if (!tipoSelecionado) return;
+            
+            const qtd = parseInt(document.getElementById('modalQtd').value) || 1;
+            const addCrase = document.getElementById('modalCrase').checked;
+            const disponiveis = estoque.filter(g => g.tipo === tipoSelecionado);
+            
+            document.getElementById('modalDisponivel').textContent = `(${disponiveis.length} disponíveis)`;
+            
+            giftsSelecionados = disponiveis.slice(0, qtd);
+            
+            const linhas = giftsSelecionados.map((g, i) => {
+                let codigo = g.codigo;
+                if (codigo.includes('PIN:')) {
+                    const partes = codigo.split('PIN:');
+                    const base = partes[0].trim();
+                    const pin = partes[1].trim();
+                    codigo = addCrase ? `\`${base}\` PIN:${pin}` : `${base} PIN:${pin}`;
+                } else {
+                    codigo = addCrase ? `\`${codigo}\`` : codigo;
+                }
+                return `${i+1}. ${codigo}`;
+            });
+            
+            document.getElementById('modalPreview').textContent = linhas.join('\n') || 'Nenhum gift disponível';
+            document.getElementById('modalBtnCopiar').disabled = giftsSelecionados.length === 0;
+            document.getElementById('modalConfirmar').disabled = giftsSelecionados.length === 0;
+        }
+
+        function copiarPreview() {
+            const texto = document.getElementById('modalPreview').textContent;
+            if (!texto || texto === 'Selecione um tipo acima...') return;
+            copiarTexto(texto);
+            mostrarToast('✅ Copiado!');
+        }
+
+        function confirmarPegar() {
+            if (!tipoSelecionado || giftsSelecionados.length === 0) {
+                mostrarToast('⚠️ Selecione um tipo com gifts disponíveis');
+                return;
+            }
+            
+            const nota = document.getElementById('modalNota').value.trim();
+            const lote = Date.now();
+            
+            giftsSelecionados.forEach(g => {
+                utilizados.push({
+                    codigo: g.codigo,
+                    tipo: g.tipo,
+                    data_utilizado: new Date().toISOString(),
+                    nota: nota,
+                    lote: lote
+                });
+                const idx = estoque.findIndex(e => e.codigo === g.codigo);
+                if (idx >= 0) estoque.splice(idx, 1);
+            });
+            
+            salvarDados();
+            
+            const texto = document.getElementById('modalPreview').textContent;
+            copiarTexto(texto);
+            
+            fecharModal();
+            mostrarEstoque();
+            mostrarToast(`✅ ${giftsSelecionados.length} gifts pegos e copiados!`);
+        }
+
+        function fecharModal() {
+            document.getElementById('modalPegar').classList.remove('active');
+        }
+
+        // ============ VISUALIZAÇÃO ============
+        function mostrarEstoque() {
+            const tipos = {};
+            estoque.forEach(g => { tipos[g.tipo] = (tipos[g.tipo] || 0) + 1; });
+            
+            let statsHTML = `<div class="stat-item" onclick="filtrarEstoque(null)">
+                <div class="stat-number">${estoque.length}</div><div class="stat-label">📦 Total</div>
+            </div>`;
+            Object.entries(tipos).sort((a,b) => b[1]-a[1]).forEach(([tipo, qtd]) => {
+                statsHTML += `<div class="stat-item" onclick="filtrarEstoque('${tipo}')">
+                    <div class="stat-number">${qtd}</div><div class="stat-label">${ICONES[tipo]||''} ${tipo.replace('_',' ')}</div>
+                </div>`;
+            });
+            document.getElementById('statsEstoque').innerHTML = statsHTML;
+            filtrarEstoque(null);
+        }
+
+        function filtrarEstoque(tipo) {
+            const filtrado = tipo ? estoque.filter(g => g.tipo === tipo) : estoque;
+            const container = document.getElementById('listaEstoque');
+            
+            if (filtrado.length === 0) {
+                container.innerHTML = '<div class="empty-state">📭 Nenhum gift</div>';
+                return;
+            }
+            
+            container.innerHTML = filtrado.map((g, i) => `
+                <div class="list-item">
+                    <span style="color:#667eea;">${i+1}.</span>
+                    <span class="list-code">${g.codigo}</span>
+                    <span class="list-badge badge-tipo">${ICONES[g.tipo]||''} ${g.tipo.replace('_',' ')}</span>
+                </div>
+            `).join('');
+        }
+
+        function copiarTodos() {
+            if (estoque.length === 0) { mostrarToast('📭 Estoque vazio'); return; }
+            const addCrase = document.getElementById('modalCrase')?.checked ?? true;
+            const texto = estoque.map((g, i) => {
+                let codigo = g.codigo;
+                if (codigo.includes('PIN:')) {
+                    const partes = codigo.split('PIN:');
+                    codigo = addCrase ? `\`${partes[0].trim()}\` PIN:${partes[1].trim()}` : codigo;
+                } else {
+                    codigo = addCrase ? `\`${codigo}\`` : codigo;
+                }
+                return `${i+1}. ${codigo}`;
+            }).join('\n');
+            copiarTexto(texto);
+            mostrarToast(`✅ ${estoque.length} códigos copiados!`);
+        }
+
+        function mostrarUtilizados() {
+            const tipos = {};
+            utilizados.forEach(g => { tipos[g.tipo] = (tipos[g.tipo] || 0) + 1; });
+            
+            let statsHTML = `<div class="stat-item"><div class="stat-number" style="color:#4caf50;">${utilizados.length}</div><div class="stat-label">✅ Total</div></div>`;
+            Object.entries(tipos).sort((a,b) => b[1]-a[1]).forEach(([tipo, qtd]) => {
+                statsHTML += `<div class="stat-item"><div class="stat-number" style="color:#4caf50;">${qtd}</div><div class="stat-label">${ICONES[tipo]||''} ${tipo.replace('_',' ')}</div></div>`;
+            });
+            document.getElementById('statsUtilizados').innerHTML = statsHTML;
+            
+            const container = document.getElementById('listaUtilizados');
+            if (utilizados.length === 0) {
+                container.innerHTML = '<div class="empty-state">📭 Nenhum gift utilizado</div>';
+                return;
+            }
+            
+            const lotes = {};
+            utilizados.forEach(g => {
+                const chave = g.lote || 'sem_lote';
+                if (!lotes[chave]) lotes[chave] = [];
+                lotes[chave].push(g);
+            });
+            
+            let html = '';
+            Object.entries(lotes).reverse().forEach(([lote, gifts]) => {
+                const data = new Date(gifts[0].data_utilizado).toLocaleString('pt-BR');
+                const nota = gifts[0].nota;
+                html += `<div style="margin-bottom:12px;padding:10px;background:#1a2a1a;border-radius:8px;">
+                    <div style="font-size:11px;color:#81c784;margin-bottom:6px;">📅 ${data} | ${gifts.length} gifts | ${ICONES[gifts[0].tipo]||''} ${gifts[0].tipo.replace('_',' ')}</div>`;
+                if (nota) html += `<div class="nota-tag" style="margin-bottom:6px;">📝 ${nota}</div>`;
+                gifts.forEach((g, i) => {
+                    html += `<div class="list-item usado" style="margin-bottom:2px;font-size:11px;">
+                        <span style="color:#81c784;">${i+1}.</span> <span class="list-code">${g.codigo}</span>
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // ============ LIMPAR ============
+        function limparEstoque() {
+            if (estoque.length === 0) {
+                mostrarToast('📭 Estoque já está vazio');
+                return;
+            }
+            if (confirm(`🗑️ Limpar TODO o estoque?\n\n${estoque.length} gifts serão removidos.\n⚠️ Esta ação não pode ser desfeita!`)) {
+                estoque = [];
+                salvarDados();
+                mostrarEstoque();
+                mostrarToast('🗑️ Estoque limpo!');
+            }
+        }
+
+        function limparUtilizados() {
+            if (utilizados.length === 0) {
+                mostrarToast('📭 Histórico já está vazio');
+                return;
+            }
+            if (confirm(`🗑️ Limpar histórico de utilizados?\n\n${utilizados.length} registros serão removidos.\n⚠️ Esta ação não pode ser desfeita!`)) {
+                utilizados = [];
+                salvarDados();
+                mostrarUtilizados();
+                mostrarToast('🗑️ Histórico limpo!');
+            }
+        }
+
+        function limparTudo() {
+            if (estoque.length === 0 && utilizados.length === 0) {
+                mostrarToast('📭 Nada para limpar');
+                return;
+            }
+            if (confirm(`⚠️ LIMPAR TUDO?\n\n📦 Estoque: ${estoque.length} gifts\n✅ Utilizados: ${utilizados.length} gifts\n\n⚠️ Esta ação NÃO pode ser desfeita!`)) {
+                estoque = [];
+                utilizados = [];
+                salvarDados();
+                mostrarEstoque();
+                mostrarUtilizados();
+                mostrarToast('🗑️ Tudo foi limpo!');
+            }
+        }
+
+        // ============ UTILITÁRIOS ============
+        function mudarSecao(secao) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('secao-' + secao).classList.add('active');
+            document.querySelectorAll('.main-tab').forEach(tab => {
+                if (tab.textContent.toLowerCase().includes(secao)) tab.classList.add('active');
+            });
+            if (secao === 'estoque') mostrarEstoque();
+            if (secao === 'utilizados') mostrarUtilizados();
+        }
+
+        function copiarTexto(texto) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(texto).catch(() => fallbackCopy(texto));
+            } else {
+                fallbackCopy(texto);
+            }
+        }
+
+        function fallbackCopy(texto) {
+            const textarea = document.createElement('textarea');
+            textarea.value = texto;
+            textarea.style.position = 'fixed'; textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        function mostrarToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        init();
+
+        document.getElementById('modalPegar').addEventListener('click', function(e) {
+            if (e.target === this) fecharModal();
+        });
+
+        const uploadArea = document.querySelector('.upload-area');
+        if (uploadArea) {
+            uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.background='#1e1e40'; });
+            uploadArea.addEventListener('dragleave', () => { uploadArea.style.background='#1a1a35'; });
+            uploadArea.addEventListener('drop', e => {
+                e.preventDefault();
+                uploadArea.style.background='#1a1a35';
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    document.getElementById('fileInput').files = e.dataTransfer.files;
+                    processarUpload({ target: { files: [file] } });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
