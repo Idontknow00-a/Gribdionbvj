@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciador de Gifts</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); min-height:100vh; padding:20px; color:#e0e0e0; }
@@ -34,6 +36,29 @@
         .btn-warning { background:linear-gradient(135deg,#ff9800 0%,#f57c00 100%); color:white; }
         .btn-danger { background:linear-gradient(135deg,#f44336 0%,#e91e63 100%); color:white; }
         .btn-copy { background:linear-gradient(135deg,#00bcd4 0%,#0097a7 100%); color:white; }
+        .btn-barcode {
+            background:transparent;
+            color:white;
+            padding:8px 12px;
+            position:relative;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-width:44px;
+            min-height:36px;
+            max-width:44px;
+            max-height:36px;
+            border:none;
+            cursor:pointer;
+        }
+        .btn-barcode:hover {
+            background: rgba(156, 39, 176, 0.2);
+            border-radius: 10px;
+        }
+        .btn-barcode:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
         .btn-small { padding:5px 12px; font-size:11px; }
         .btn:active { transform:scale(0.95); }
         .btn:disabled { opacity:0.4; cursor:not-allowed; }
@@ -62,11 +87,32 @@
         .modal-overlay.active { display:flex; }
         .modal { background:#1e1e3a; padding:25px; border-radius:15px; max-width:550px; width:95%; border:1px solid #3a3a5a; max-height:90vh; overflow-y:auto; }
         .modal h3 { color:#fff; margin-bottom:15px; }
-        .modal-buttons { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; }
+        .modal-buttons { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; align-items:center; }
 
         .result-box { background:#111; border:1px solid #333; border-radius:8px; padding:12px; font-family:'Courier New',monospace; font-size:12px; color:#4caf50; max-height:250px; overflow-y:auto; white-space:pre-wrap; line-height:1.5; margin-top:10px; }
 
-        .checkbox-inline { display:flex; align-items:center; gap:6px; font-size:12px; color:#aaa; }
+        .options-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .checkbox-inline { 
+            display:flex; 
+            align-items:center; 
+            gap:6px; 
+            font-size:12px; 
+            color:#aaa; 
+            white-space:nowrap;
+        }
         .checkbox-inline input { width:16px; height:16px; }
 
         .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:12px 25px; border-radius:25px; font-size:14px; z-index:2000; opacity:0; transition:opacity 0.3s; }
@@ -76,11 +122,113 @@
 
         .nota-tag { font-size:10px; color:#ff9800; margin-top:3px; font-style:italic; }
 
+        .barcode-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 20px;
+            width: 28px;
+            gap: 1px;
+        }
+        
+        .barcode-lines {
+            display: flex;
+            align-items: stretch;
+            height: 20px;
+            gap: 1px;
+        }
+        
+        .barcode-line {
+            background: white;
+            border-radius: 0;
+        }
+        
+        .barcode-line:nth-child(1) { width: 2px; }
+        .barcode-line:nth-child(2) { width: 1px; }
+        .barcode-line:nth-child(3) { width: 2px; }
+        .barcode-line:nth-child(4) { width: 1px; }
+        .barcode-line:nth-child(5) { width: 3px; }
+        .barcode-line:nth-child(6) { width: 1px; }
+        .barcode-line:nth-child(7) { width: 2px; }
+        .barcode-line:nth-child(8) { width: 1px; }
+        .barcode-line:nth-child(9) { width: 2px; }
+        .barcode-line:nth-child(10) { width: 1px; }
+        .barcode-line:nth-child(11) { width: 3px; }
+        .barcode-line:nth-child(12) { width: 1px; }
+        .barcode-line:nth-child(13) { width: 2px; }
+        .barcode-line:nth-child(14) { width: 1px; }
+        .barcode-line:nth-child(15) { width: 2px; }
+
+        .barcode-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #f44336;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .loading-overlay.active {
+            display: flex;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #9c27b0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .loading-progress {
+            color: #aaa;
+            font-size: 14px;
+            text-align: center;
+        }
+
         @media (max-width:600px) { 
             .container{padding:10px;} 
             .stats-grid{grid-template-columns:repeat(2,1fr);} 
             .input-row{flex-direction:column;}
             .modal{width:100%;border-radius:0;}
+            .options-row {
+                justify-content: space-between;
+            }
         }
     </style>
 </head>
@@ -97,6 +245,13 @@
 
         <div class="toast" id="toast"></div>
 
+        <!-- Loading overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Gerando códigos de barras...</div>
+            <div class="loading-progress" id="loadingProgress">0/0</div>
+        </div>
+
         <!-- ==================== MODAL PEGAR ==================== -->
         <div class="modal-overlay" id="modalPegar">
             <div class="modal">
@@ -106,13 +261,47 @@
                 
                 <div class="input-row">
                     <label style="color:#aaa;white-space:nowrap;">Quantidade:</label>
-                    <input type="number" id="modalQtd" value="1" min="1" style="width:70px;" onchange="atualizarPreview()">
+                    <input type="number" id="modalQtd" value="1" min="1" style="width:70px;" oninput="atualizarPreview()">
                     <span style="color:#aaa;font-size:12px;" id="modalDisponivel"></span>
                 </div>
                 
-                <div class="checkbox-inline" style="margin-bottom:10px;">
-                    <input type="checkbox" id="modalCrase" checked onchange="atualizarPreview()">
-                    <label for="modalCrase">Adicionar ` no início e fim</label>
+                <div class="options-row">
+                    <div class="checkbox-stack">
+                        <div class="checkbox-inline">
+                            <input type="checkbox" id="modalCrase" checked onchange="atualizarPreview()">
+                            <label for="modalCrase">Adicionar ` no início e fim</label>
+                        </div>
+
+                        <div class="checkbox-inline">
+                            <input type="checkbox" id="modalEnumerar" checked onchange="atualizarPreview()">
+                            <label for="modalEnumerar">Adicionar numeração</label>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-barcode" id="modalBtnBarcode" onclick="compartilharBarcode()" disabled title="Gerar código de barras">
+                        <span class="barcode-icon">
+                            <span class="barcode-lines">
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                                <span class="barcode-line"></span>
+                            </span>
+                        </span>
+                        <span class="barcode-badge" id="barcodeBadge" style="display:none;">
+                            <span id="barcodeCount">0</span>
+                        </span>
+                    </button>
                 </div>
                 
                 <textarea id="modalNota" placeholder="📝 Nota (ex: Vendido para fulano...)" style="width:100%;background:#2a2a4a;border:1px solid #3a3a5a;color:#fff;padding:10px;border-radius:10px;font-size:13px;resize:vertical;min-height:50px;"></textarea>
@@ -141,7 +330,6 @@
 
                 <div id="listaEstoque" style="max-height:400px;overflow-y:auto;"></div>
 
-                <!-- BOTÕES LIMPAR -->
                 <div style="margin-top:15px; display:flex; gap:8px; justify-content:flex-end;">
                     <button class="btn btn-danger" onclick="limparEstoque()">🗑️ Limpar Estoque</button>
                 </div>
@@ -172,7 +360,6 @@
                 <div class="stats-grid" id="statsUtilizados"></div>
                 <div id="listaUtilizados"></div>
 
-                <!-- BOTÕES LIMPAR -->
                 <div style="margin-top:15px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
                     <button class="btn btn-danger" onclick="limparUtilizados()">🗑️ Limpar Histórico</button>
                     <button class="btn btn-danger" onclick="limparTudo()" style="background:linear-gradient(135deg,#d32f2f 0%,#b71c1c 100%);">⚠️ Limpar TUDO</button>
@@ -184,11 +371,13 @@
     <script>
         const STORAGE_ESTOQUE = 'gerenciador_estoque';
         const STORAGE_UTILIZADOS = 'gerenciador_utilizados';
+        const MAX_BARCODE_SHARE = 10;
 
         let estoque = [];
         let utilizados = [];
         let tipoSelecionado = null;
         let giftsSelecionados = [];
+        let giftsCompartilhadosBarcode = [];
 
         const TIPOS = ['CARREFOUR', 'KOPENHAGEN', 'RENNER', 'CACAU_SHOW', 'SHELL', 'CEA', 'IFOOD'];
         const ICONES = { 'CARREFOUR':'🏪', 'KOPENHAGEN':'🍫', 'RENNER':'👗', 'CACAU_SHOW':'🍫', 'SHELL':'🐚', 'CEA':'👕', 'IFOOD':'🍕' };
@@ -320,6 +509,7 @@
         function abrirModalPegar() {
             tipoSelecionado = null;
             giftsSelecionados = [];
+            giftsCompartilhadosBarcode = [];
             
             const tiposCount = {};
             estoque.forEach(g => { tiposCount[g.tipo] = (tiposCount[g.tipo] || 0) + 1; });
@@ -337,8 +527,10 @@
             document.getElementById('modalNota').value = '';
             document.getElementById('modalPreview').textContent = 'Selecione um tipo acima...';
             document.getElementById('modalBtnCopiar').disabled = true;
+            document.getElementById('modalBtnBarcode').disabled = true;
             document.getElementById('modalConfirmar').disabled = true;
             document.getElementById('modalDisponivel').textContent = '';
+            document.getElementById('barcodeBadge').style.display = 'none';
             
             document.getElementById('modalPegar').classList.add('active');
             
@@ -351,6 +543,9 @@
             document.querySelectorAll('#modalPegar .stat-item').forEach(el => el.classList.remove('selected'));
             const el = document.getElementById('modalTipo-' + tipo);
             if (el) el.classList.add('selected');
+
+            giftsCompartilhadosBarcode = [];
+
             atualizarPreview();
         }
 
@@ -359,10 +554,12 @@
             
             const qtd = parseInt(document.getElementById('modalQtd').value) || 1;
             const addCrase = document.getElementById('modalCrase').checked;
+            const addEnumerar = document.getElementById('modalEnumerar').checked;
             const disponiveis = estoque.filter(g => g.tipo === tipoSelecionado);
             
             document.getElementById('modalDisponivel').textContent = `(${disponiveis.length} disponíveis)`;
             
+            giftsCompartilhadosBarcode = [];
             giftsSelecionados = disponiveis.slice(0, qtd);
             
             const linhas = giftsSelecionados.map((g, i) => {
@@ -375,12 +572,34 @@
                 } else {
                     codigo = addCrase ? `\`${codigo}\`` : codigo;
                 }
-                return `${i+1}. ${codigo}`;
+                return addEnumerar ? `${i+1}. ${codigo}` : codigo;
             });
             
             document.getElementById('modalPreview').textContent = linhas.join('\n') || 'Nenhum gift disponível';
             document.getElementById('modalBtnCopiar').disabled = giftsSelecionados.length === 0;
+            document.getElementById('modalBtnBarcode').disabled = giftsSelecionados.length === 0;
             document.getElementById('modalConfirmar').disabled = giftsSelecionados.length === 0;
+            
+            atualizarContadorBarcode();
+        }
+
+        function atualizarContadorBarcode() {
+            const badge = document.getElementById('barcodeBadge');
+            const count = document.getElementById('barcodeCount');
+            
+            const naoCompartilhados = giftsSelecionados.filter(g => 
+                !giftsCompartilhadosBarcode.some(gc => gc.codigo === g.codigo)
+            );
+            
+            if (naoCompartilhados.length === 0) {
+                badge.style.display = 'none';
+            } else if (naoCompartilhados.length > MAX_BARCODE_SHARE) {
+                badge.style.display = 'flex';
+                count.textContent = Math.ceil(naoCompartilhados.length / MAX_BARCODE_SHARE);
+            } else {
+                badge.style.display = 'flex';
+                count.textContent = '1';
+            }
         }
 
         function copiarPreview() {
@@ -388,6 +607,141 @@
             if (!texto || texto === 'Selecione um tipo acima...') return;
             copiarTexto(texto);
             mostrarToast('✅ Copiado!');
+        }
+
+        async function compartilharBarcode() {
+            if (giftsSelecionados.length === 0) {
+                mostrarToast('⚠️ Selecione gifts primeiro');
+                return;
+            }
+            
+            const giftsNaoCompartilhados = giftsSelecionados.filter(g => 
+                !giftsCompartilhadosBarcode.some(gc => gc.codigo === g.codigo)
+            );
+            
+            if (giftsNaoCompartilhados.length === 0) {
+                mostrarToast('📊 Todos os gifts já foram compartilhados');
+                return;
+            }
+            
+            const giftsParaCompartilhar = giftsNaoCompartilhados.slice(0, MAX_BARCODE_SHARE);
+            
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingProgress = document.getElementById('loadingProgress');
+            loadingOverlay.classList.add('active');
+            
+            const arquivos = [];
+            
+            for (let i = 0; i < giftsParaCompartilhar.length; i++) {
+                const gift = giftsParaCompartilhar[i];
+                const codigoLimpo = gift.codigo.split('PIN:')[0].trim();
+                
+                loadingProgress.textContent = `${i + 1}/${giftsParaCompartilhar.length}`;
+                
+                try {
+                    if (!podeGerarBarcode(codigoLimpo)) {
+                        console.log(`Não é possível gerar barcode para: ${codigoLimpo}`);
+                        continue;
+                    }
+                    
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;background:white;';
+                    
+                    const containerDiv = document.createElement('div');
+                    containerDiv.style.cssText = 'background:white;padding:20px;text-align:center;display:inline-block;';
+                    
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.id = `temp-barcode-${i}-${Date.now()}`;
+                    containerDiv.appendChild(svg);
+                    
+                    const codigoDiv = document.createElement('div');
+                    codigoDiv.style.cssText = 'font-size:18px;font-weight:bold;margin-top:10px;font-family:Arial,sans-serif;color:black;';
+                    codigoDiv.textContent = codigoLimpo;
+                    containerDiv.appendChild(codigoDiv);
+                    
+                    if (gift.codigo.includes('PIN:')) {
+                        const pinDiv = document.createElement('div');
+                        pinDiv.style.cssText = 'font-size:16px;margin-top:5px;font-family:Arial,sans-serif;color:black;';
+                        pinDiv.textContent = `PIN: ${gift.codigo.split('PIN:')[1].trim()}`;
+                        containerDiv.appendChild(pinDiv);
+                    }
+                    
+                    tempDiv.appendChild(containerDiv);
+                    document.body.appendChild(tempDiv);
+                    
+                    JsBarcode(svg, codigoLimpo, {
+                        format: "CODE128",
+                        width: 2.5,
+                        height: 80,
+                        displayValue: false,
+                        margin: 15,
+                        fontSize: 0,
+                        textMargin: 0,
+                    });
+                    
+                    svg.setAttribute('width', '400px');
+                    svg.style.width = '400px';
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const dataUrl = await htmlToImage.toPng(containerDiv, {
+                        backgroundColor: 'white',
+                        pixelRatio: 3,
+                        width: containerDiv.offsetWidth,
+                        height: containerDiv.offsetHeight,
+                    });
+                    
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const file = new File([blob], `${i+1}-${codigoLimpo}.png`, { type: 'image/png' });
+                    arquivos.push(file);
+                    
+                    giftsCompartilhadosBarcode.push(gift);
+                    
+                    document.body.removeChild(tempDiv);
+                } catch (error) {
+                    console.error('Erro ao gerar barcode:', error);
+                    mostrarToast('❌ Erro ao gerar barcode para: ' + codigoLimpo);
+                }
+            }
+            
+            loadingOverlay.classList.remove('active');
+            
+            atualizarContadorBarcode();
+            
+            if (arquivos.length === 0) {
+                mostrarToast('❌ Não foi possível gerar barcodes para esses gifts');
+                return;
+            }
+            
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: arquivos })) {
+                try {
+                    await navigator.share({
+                        title: 'Gifts - Códigos de Barras',
+                        files: arquivos,
+                    });
+                    mostrarToast(`📊 ${arquivos.length} barcodes compartilhados!`);
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.log('Erro ao compartilhar:', err);
+                        mostrarToast('❌ Erro ao compartilhar');
+                    }
+                }
+            } else {
+                mostrarToast('📥 Compartilhamento não suportado. Baixando imagens...');
+                for (let i = 0; i < arquivos.length; i++) {
+                    baixarBlob(arquivos[i], `${i+1}-barcode.png`);
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+            }
+        }
+
+        function podeGerarBarcode(codigo) {
+            for (let i = 0; i < codigo.length; i++) {
+                if (codigo.charCodeAt(i) > 127) {
+                    return false;
+                }
+            }
+            return codigo.length > 0;
         }
 
         function confirmarPegar() {
@@ -463,6 +817,7 @@
         function copiarTodos() {
             if (estoque.length === 0) { mostrarToast('📭 Estoque vazio'); return; }
             const addCrase = document.getElementById('modalCrase')?.checked ?? true;
+            const addEnumerar = document.getElementById('modalEnumerar')?.checked ?? true;
             const texto = estoque.map((g, i) => {
                 let codigo = g.codigo;
                 if (codigo.includes('PIN:')) {
@@ -471,7 +826,7 @@
                 } else {
                     codigo = addCrase ? `\`${codigo}\`` : codigo;
                 }
-                return `${i+1}. ${codigo}`;
+                return addEnumerar ? `${i+1}. ${codigo}` : codigo;
             }).join('\n');
             copiarTexto(texto);
             mostrarToast(`✅ ${estoque.length} códigos copiados!`);
@@ -587,6 +942,17 @@
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
+        }
+
+        function baixarBlob(blob, nomeArquivo) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nomeArquivo;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function mostrarToast(msg) {
