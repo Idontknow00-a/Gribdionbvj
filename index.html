@@ -36,6 +36,8 @@
         .btn-warning { background:linear-gradient(135deg,#ff9800 0%,#f57c00 100%); color:white; }
         .btn-danger { background:linear-gradient(135deg,#f44336 0%,#e91e63 100%); color:white; }
         .btn-copy { background:linear-gradient(135deg,#00bcd4 0%,#0097a7 100%); color:white; }
+        .btn-export { background:linear-gradient(135deg,#4caf50 0%,#2e7d32 100%); color:white; }
+        .btn-import { background:linear-gradient(135deg,#2196f3 0%,#1565c0 100%); color:white; }
         .btn-barcode {
             background:transparent;
             color:white;
@@ -59,18 +61,18 @@
             opacity: 0.4;
             cursor: not-allowed;
         }
-        .btn-small { padding:5px 12px; font-size:11px; }
         .btn:active { transform:scale(0.95); }
         .btn:disabled { opacity:0.4; cursor:not-allowed; }
 
         .input-row { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center; }
-        .input-row input, .input-row textarea { 
+        .input-row input, .input-row textarea, .input-row select { 
             background:#2a2a4a; border:1px solid #3a3a5a; color:#fff; padding:10px 15px; 
             border-radius:10px; font-size:14px; outline:none; 
         }
-        .input-row input:focus, .input-row textarea:focus { border-color:#667eea; }
+        .input-row input:focus, .input-row textarea:focus, .input-row select:focus { border-color:#667eea; }
         .input-row input { flex:1; min-width:100px; }
         .input-row textarea { width:100%; resize:vertical; min-height:70px; }
+        .input-row select { flex:1; min-width:150px; }
 
         .upload-area { border:2px dashed #3a3a5a; border-radius:12px; padding:25px; text-align:center; cursor:pointer; transition:all 0.3s; background:#1a1a35; margin-bottom:15px; }
         .upload-area:hover { border-color:#667eea; background:#1e1e40; }
@@ -90,6 +92,46 @@
         .modal-buttons { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; align-items:center; }
 
         .result-box { background:#111; border:1px solid #333; border-radius:8px; padding:12px; font-family:'Courier New',monospace; font-size:12px; color:#4caf50; max-height:250px; overflow-y:auto; white-space:pre-wrap; line-height:1.5; margin-top:10px; }
+
+        .gift-chip-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            min-height: 60px;
+            margin-top: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .gift-chip {
+            display: block;
+            background: #2a2a4a;
+            border: 1px solid #3a3a5a;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #4caf50;
+            word-break: break-all;
+            text-align: left;
+        }
+        .gift-chip:hover {
+            background: #3a3a5a;
+            border-color: #667eea;
+        }
+        .gift-chip:active {
+            transform: scale(0.98);
+        }
+        .gift-chip.copied {
+            background: #1a3a1a;
+            border-color: #4caf50;
+        }
 
         .options-row {
             display: flex;
@@ -221,6 +263,49 @@
             text-align: center;
         }
 
+        .config-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1a1a35;
+            border-radius: 10px;
+        }
+
+        .config-title {
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .pattern-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .pattern-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #2a2a4a;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .pattern-item .pattern-name {
+            color: #fff;
+            font-weight: bold;
+            min-width: 100px;
+        }
+
+        .pattern-item .pattern-regex {
+            color: #4caf50;
+            font-family: monospace;
+            font-size: 11px;
+            flex: 1;
+        }
+
         @media (max-width:600px) { 
             .container{padding:10px;} 
             .stats-grid{grid-template-columns:repeat(2,1fr);} 
@@ -238,8 +323,9 @@
         <p class="subtitle">Adicione • Organize • Pegue • Controle</p>
 
         <div class="main-tabs">
-            <button class="main-tab active" onclick="mudarSecao('estoque')">📦 Estoque</button>
             <button class="main-tab" onclick="mudarSecao('adicionar')">➕ Adicionar</button>
+            <button class="main-tab" onclick="mudarSecao('config')">⚙️ Config</button>
+            <button class="main-tab active" onclick="mudarSecao('estoque')">📦 Estoque</button>
             <button class="main-tab" onclick="mudarSecao('utilizados')">✅ Utilizados</button>
         </div>
 
@@ -306,7 +392,10 @@
                 
                 <textarea id="modalNota" placeholder="📝 Nota (ex: Vendido para fulano...)" style="width:100%;background:#2a2a4a;border:1px solid #3a3a5a;color:#fff;padding:10px;border-radius:10px;font-size:13px;resize:vertical;min-height:50px;"></textarea>
                 
-                <div class="result-box" id="modalPreview">Selecione um tipo e quantidade...</div>
+                <div id="modalPreviewContainer">
+                    <div class="result-box" id="modalPreview">Selecione um tipo e quantidade...</div>
+                    <div class="gift-chip-container" id="chipsContainer" style="display:none;"></div>
+                </div>
                 
                 <div class="modal-buttons">
                     <button class="btn btn-copy" id="modalBtnCopiar" onclick="copiarPreview()" disabled>📋 Copiar</button>
@@ -348,6 +437,21 @@
                 <input type="file" id="fileInput" class="file-input" accept=".csv" onchange="processarUpload(event)">
                 
                 <textarea id="inputManual" placeholder="Cole os códigos aqui, um por linha..." style="width:100%;background:#2a2a4a;border:1px solid #3a3a5a;color:#fff;padding:12px;border-radius:10px;font-size:13px;resize:vertical;min-height:120px;"></textarea>
+                
+                <div class="input-row" style="margin-top:8px;">
+                    <select id="tipoManual">
+                        <option value="">🤖 Auto-detectar tipo</option>
+                        <option value="CENTAURO">🏋️ Centauro</option>
+                        <option value="KOPENHAGEN">🍫 Kopenhagen</option>
+                        <option value="CARREFOUR">🏪 Carrefour</option>
+                        <option value="RENNER">👗 Renner</option>
+                        <option value="CACAU_SHOW">🍫 Cacau Show</option>
+                        <option value="SHELL">🐚 Shell</option>
+                        <option value="CEA">👕 CEA</option>
+                        <option value="IFOOD">🍕 iFood</option>
+                    </select>
+                </div>
+                
                 <button class="btn btn-primary" onclick="adicionarManualmente()" style="width:100%;margin-top:8px;">➕ Adicionar ao Estoque</button>
                 <div style="margin-top:8px;font-size:11px;color:#888;">⚠️ Duplicados e já utilizados são ignorados automaticamente</div>
             </div>
@@ -366,25 +470,63 @@
                 </div>
             </div>
         </div>
+
+        <!-- ==================== SEÇÃO CONFIG ==================== -->
+        <div class="section" id="secao-config">
+            <div class="card">
+                <h3>⚙️ Configurações</h3>
+                
+                <div class="config-section">
+                    <div class="config-title">📤 Exportar Dados</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-export" onclick="exportarDados()">💾 Exportar JSON</button>
+                        <button class="btn btn-export" onclick="exportarCSV()">📄 Exportar CSV</button>
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <div class="config-title">📥 Importar Dados</div>
+                    <div class="upload-area" onclick="document.getElementById('importFile').click()" style="padding:15px;">
+                        <div class="upload-icon" style="font-size:24px;">📂</div>
+                        <div style="font-size:13px;">Importar JSON ou CSV</div>
+                    </div>
+                    <input type="file" id="importFile" class="file-input" accept=".json,.csv" onchange="importarDados(event)">
+                </div>
+                
+                <div class="config-section">
+                    <div class="config-title">🔧 Gerenciar Padrões</div>
+                    <div class="input-row">
+                        <input type="text" id="novoPadraoNome" placeholder="Nome do tipo (ex: AMAZON)" style="flex:1;">
+                        <input type="text" id="novoPadraoRegex" placeholder="Regex (ex: ^AMZ-[A-Z0-9]{10}$)" style="flex:1;">
+                        <button class="btn btn-primary" onclick="adicionarNovoPadrao()">➕</button>
+                    </div>
+                    <div class="pattern-list" id="listaPadroes"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         const STORAGE_ESTOQUE = 'gerenciador_estoque';
         const STORAGE_UTILIZADOS = 'gerenciador_utilizados';
+        const STORAGE_PADROES = 'gerenciador_padroes';
         const MAX_BARCODE_SHARE = 10;
 
         let estoque = [];
         let utilizados = [];
+        let padroesCustomizados = [];
         let tipoSelecionado = null;
         let giftsSelecionados = [];
         let giftsCompartilhadosBarcode = [];
 
-        const TIPOS = ['CARREFOUR', 'KOPENHAGEN', 'RENNER', 'CACAU_SHOW', 'SHELL', 'CEA', 'IFOOD'];
-        const ICONES = { 'CARREFOUR':'🏪', 'KOPENHAGEN':'🍫', 'RENNER':'👗', 'CACAU_SHOW':'🍫', 'SHELL':'🐚', 'CEA':'👕', 'IFOOD':'🍕' };
+        const TIPOS = ['CARREFOUR', 'KOPENHAGEN', 'CENTAURO', 'RENNER', 'CACAU_SHOW', 'SHELL', 'CEA', 'IFOOD'];
+        const ICONES = { 'CARREFOUR':'🏪', 'KOPENHAGEN':'🍫', 'CENTAURO':'🏋️', 'RENNER':'👗', 'CACAU_SHOW':'🍫', 'SHELL':'🐚', 'CEA':'👕', 'IFOOD':'🍕' };
 
         function init() {
             carregarDados();
+            carregarPadroes();
             mostrarEstoque();
+            mostrarPadroes();
         }
 
         function carregarDados() {
@@ -397,6 +539,89 @@
             localStorage.setItem(STORAGE_UTILIZADOS, JSON.stringify(utilizados));
         }
 
+        function carregarPadroes() {
+            padroesCustomizados = JSON.parse(localStorage.getItem(STORAGE_PADROES) || '[]');
+        }
+
+        function salvarPadroes() {
+            localStorage.setItem(STORAGE_PADROES, JSON.stringify(padroesCustomizados));
+        }
+
+        function mostrarPadroes() {
+            const container = document.getElementById('listaPadroes');
+            if (padroesCustomizados.length === 0) {
+                container.innerHTML = '<div class="empty-state">📭 Nenhum padrão customizado</div>';
+                return;
+            }
+            
+            container.innerHTML = padroesCustomizados.map((p, i) => `
+                <div class="pattern-item">
+                    <span class="pattern-name">${p.nome}</span>
+                    <span class="pattern-regex">${p.regex}</span>
+                    <button class="btn btn-danger btn-small" onclick="removerPadrao(${i})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function adicionarNovoPadrao() {
+            const nome = document.getElementById('novoPadraoNome').value.trim().toUpperCase();
+            const regex = document.getElementById('novoPadraoRegex').value.trim();
+            
+            if (!nome || !regex) {
+                mostrarToast('⚠️ Preencha nome e regex');
+                return;
+            }
+            
+            // Validar regex
+            try {
+                new RegExp(regex);
+            } catch (e) {
+                mostrarToast('❌ Regex inválida');
+                return;
+            }
+            
+            padroesCustomizados.push({ nome, regex });
+            salvarPadroes();
+            mostrarPadroes();
+            
+            document.getElementById('novoPadraoNome').value = '';
+            document.getElementById('novoPadraoRegex').value = '';
+            
+            // Atualizar dropdown de tipos
+            atualizarDropdownTipos();
+            
+            mostrarToast(`✅ Padrão ${nome} adicionado!`);
+        }
+
+        function removerPadrao(index) {
+            padroesCustomizados.splice(index, 1);
+            salvarPadroes();
+            mostrarPadroes();
+            atualizarDropdownTipos();
+            mostrarToast('🗑️ Padrão removido');
+        }
+
+        function atualizarDropdownTipos() {
+            const select = document.getElementById('tipoManual');
+            const valorAtual = select.value;
+            
+            // Manter opções padrão
+            let html = '<option value="">🤖 Auto-detectar tipo</option>';
+            
+            // Adicionar tipos padrão
+            TIPOS.forEach(tipo => {
+                html += `<option value="${tipo}">${ICONES[tipo] || '🎁'} ${tipo.replace('_', ' ')}</option>`;
+            });
+            
+            // Adicionar tipos customizados
+            padroesCustomizados.forEach(p => {
+                html += `<option value="${p.nome}">🎁 ${p.nome.replace('_', ' ')}</option>`;
+            });
+            
+            select.innerHTML = html;
+            select.value = valorAtual;
+        }
+
         // ============ IDENTIFICAÇÃO ============
         function identificarTipo(codigo) {
             if (!codigo || codigo === 'SEM_CODIGO' || codigo === 'N/A' || 
@@ -405,6 +630,18 @@
             
             const c = codigo.toString().trim().toUpperCase();
             if (c === 'INSTITUCIONAL' || c === 'N/A') return null;
+            
+            // Verificar padrões customizados primeiro
+            for (const padrao of padroesCustomizados) {
+                try {
+                    const regex = new RegExp(padrao.regex, 'i');
+                    if (regex.test(c)) {
+                        return padrao.nome;
+                    }
+                } catch (e) {
+                    console.error('Regex inválida:', padrao.regex);
+                }
+            }
             
             if (c.includes('PIN:')) {
                 const partes = c.split('PIN:');
@@ -460,6 +697,33 @@
             mostrarToast(msg);
         }
 
+        function adicionarGiftsComTipo(listaCodigos, tipoForcado) {
+            let adicionados = 0, ignoradosDuplicados = 0, ignoradosUtilizados = 0;
+
+            listaCodigos.forEach(codigo => {
+                codigo = codigo.trim();
+                if (!codigo) return;
+
+                if (isCodigoUtilizado(codigo)) { ignoradosUtilizados++; return; }
+                if (isCodigoNoEstoque(codigo)) { ignoradosDuplicados++; return; }
+
+                estoque.push({ 
+                    codigo, 
+                    tipo: tipoForcado, 
+                    data_adicionado: new Date().toISOString() 
+                });
+                adicionados++;
+            });
+
+            salvarDados();
+            mostrarEstoque();
+
+            let msg = `✅ ${adicionados} adicionados como ${tipoForcado}`;
+            if (ignoradosDuplicados > 0) msg += ` | 🔄 ${ignoradosDuplicados} já no estoque`;
+            if (ignoradosUtilizados > 0) msg += ` | ✅ ${ignoradosUtilizados} já utilizados`;
+            mostrarToast(msg);
+        }
+
         function processarUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -499,10 +763,99 @@
 
         function adicionarManualmente() {
             const texto = document.getElementById('inputManual').value;
+            const tipoForcado = document.getElementById('tipoManual').value;
+            
             if (!texto.trim()) { mostrarToast('📭 Cole os códigos primeiro'); return; }
+            
             const codigos = texto.split('\n').map(l => l.trim()).filter(l => l);
-            adicionarGifts(codigos);
+            
+            if (tipoForcado) {
+                adicionarGiftsComTipo(codigos, tipoForcado);
+            } else {
+                adicionarGifts(codigos);
+            }
+            
             document.getElementById('inputManual').value = '';
+        }
+
+        // ============ IMPORTAÇÃO/EXPORTAÇÃO ============
+        function exportarDados() {
+            const dados = {
+                versao: '1.0',
+                data_exportacao: new Date().toISOString(),
+                estoque: estoque,
+                utilizados: utilizados,
+                padroes: padroesCustomizados
+            };
+            
+            const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+            baixarBlob(blob, `gifts_backup_${new Date().toISOString().split('T')[0]}.json`);
+            mostrarToast('💾 Dados exportados!');
+        }
+
+        function exportarCSV() {
+            let csv = 'Codigo,Tipo,Data\n';
+            estoque.forEach(g => {
+                csv += `"${g.codigo}","${g.tipo}","${g.data_adicionado}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            baixarBlob(blob, `gifts_estoque_${new Date().toISOString().split('T')[0]}.csv`);
+            mostrarToast('📄 CSV exportado!');
+        }
+
+        function importarDados(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const conteudo = e.target.result;
+                    
+                    // Tentar importar como JSON
+                    if (file.name.endsWith('.json')) {
+                        const dados = JSON.parse(conteudo);
+                        
+                        if (dados.estoque) {
+                            estoque = dados.estoque;
+                        }
+                        if (dados.utilizados) {
+                            utilizados = dados.utilizados;
+                        }
+                        if (dados.padroes) {
+                            padroesCustomizados = dados.padroes;
+                        }
+                        
+                        salvarDados();
+                        salvarPadroes();
+                        mostrarEstoque();
+                        mostrarUtilizados();
+                        mostrarPadroes();
+                        atualizarDropdownTipos();
+                        mostrarToast('📥 Dados importados com sucesso!');
+                    } else {
+                        // Importar como CSV
+                        const linhas = conteudo.split('\n');
+                        const codigos = [];
+                        
+                        for (let i = 1; i < linhas.length; i++) {
+                            if (!linhas[i].trim()) continue;
+                            const campos = parseCSV(linhas[i]);
+                            if (campos.length > 0 && campos[0].trim()) {
+                                codigos.push(campos[0].replace(/"/g, '').trim());
+                            }
+                        }
+                        
+                        adicionarGifts(codigos);
+                        mostrarToast('📥 CSV importado!');
+                    }
+                } catch (error) {
+                    console.error('Erro ao importar:', error);
+                    mostrarToast('❌ Erro ao importar arquivo');
+                }
+            };
+            reader.readAsText(file);
         }
 
         // ============ PEGAR GIFTS ============
@@ -526,6 +879,8 @@
             document.getElementById('modalQtd').value = document.getElementById('qtdPegar').value || 1;
             document.getElementById('modalNota').value = '';
             document.getElementById('modalPreview').textContent = 'Selecione um tipo acima...';
+            document.getElementById('chipsContainer').innerHTML = '';
+            document.getElementById('chipsContainer').style.display = 'none';
             document.getElementById('modalBtnCopiar').disabled = true;
             document.getElementById('modalBtnBarcode').disabled = true;
             document.getElementById('modalConfirmar').disabled = true;
@@ -562,20 +917,47 @@
             giftsCompartilhadosBarcode = [];
             giftsSelecionados = disponiveis.slice(0, qtd);
             
-            const linhas = giftsSelecionados.map((g, i) => {
-                let codigo = g.codigo;
-                if (codigo.includes('PIN:')) {
-                    const partes = codigo.split('PIN:');
-                    const base = partes[0].trim();
-                    const pin = partes[1].trim();
-                    codigo = addCrase ? `\`${base}\` PIN:${pin}` : `${base} PIN:${pin}`;
-                } else {
-                    codigo = addCrase ? `\`${codigo}\`` : codigo;
-                }
-                return addEnumerar ? `${i+1}. ${codigo}` : codigo;
-            });
+            const modalPreview = document.getElementById('modalPreview');
+            const chipsContainer = document.getElementById('chipsContainer');
             
-            document.getElementById('modalPreview').textContent = linhas.join('\n') || 'Nenhum gift disponível';
+            if (!addCrase && !addEnumerar) {
+                modalPreview.style.display = 'none';
+                chipsContainer.style.display = 'flex';
+                chipsContainer.innerHTML = '';
+                
+                giftsSelecionados.forEach((g) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'gift-chip';
+                    chip.textContent = g.codigo;
+                    chip.setAttribute('data-codigo', g.codigo);
+                    chip.addEventListener('click', function() {
+                        copiarTexto(g.codigo);
+                        chip.classList.add('copied');
+                        setTimeout(() => chip.classList.remove('copied'), 500);
+                    });
+                    chipsContainer.appendChild(chip);
+                });
+            } else {
+                modalPreview.style.display = 'block';
+                chipsContainer.style.display = 'none';
+                chipsContainer.innerHTML = '';
+                
+                const linhas = giftsSelecionados.map((g, i) => {
+                    let codigo = g.codigo;
+                    if (codigo.includes('PIN:')) {
+                        const partes = codigo.split('PIN:');
+                        const base = partes[0].trim();
+                        const pin = partes[1].trim();
+                        codigo = addCrase ? `\`${base}\` PIN:${pin}` : `${base} PIN:${pin}`;
+                    } else {
+                        codigo = addCrase ? `\`${codigo}\`` : codigo;
+                    }
+                    return addEnumerar ? `${i+1}. ${codigo}` : codigo;
+                });
+                
+                modalPreview.textContent = linhas.join('\n') || 'Nenhum gift disponível';
+            }
+            
             document.getElementById('modalBtnCopiar').disabled = giftsSelecionados.length === 0;
             document.getElementById('modalBtnBarcode').disabled = giftsSelecionados.length === 0;
             document.getElementById('modalConfirmar').disabled = giftsSelecionados.length === 0;
@@ -603,10 +985,20 @@
         }
 
         function copiarPreview() {
+            const addCrase = document.getElementById('modalCrase').checked;
+            const addEnumerar = document.getElementById('modalEnumerar').checked;
+            
+            if (!addCrase && !addEnumerar) {
+                const texto = giftsSelecionados.map(g => g.codigo).join('\n');
+                if (texto) {
+                    copiarTexto(texto);
+                }
+                return;
+            }
+            
             const texto = document.getElementById('modalPreview').textContent;
             if (!texto || texto === 'Selecione um tipo acima...') return;
             copiarTexto(texto);
-            mostrarToast('✅ Copiado!');
         }
 
         async function compartilharBarcode() {
@@ -767,12 +1159,11 @@
             
             salvarDados();
             
-            const texto = document.getElementById('modalPreview').textContent;
-            copiarTexto(texto);
+            copiarPreview();
             
             fecharModal();
             mostrarEstoque();
-            mostrarToast(`✅ ${giftsSelecionados.length} gifts pegos e copiados!`);
+            mostrarToast(`✅ ${giftsSelecionados.length} gifts pegos!`);
         }
 
         function fecharModal() {
@@ -789,7 +1180,7 @@
             </div>`;
             Object.entries(tipos).sort((a,b) => b[1]-a[1]).forEach(([tipo, qtd]) => {
                 statsHTML += `<div class="stat-item" onclick="filtrarEstoque('${tipo}')">
-                    <div class="stat-number">${qtd}</div><div class="stat-label">${ICONES[tipo]||''} ${tipo.replace('_',' ')}</div>
+                    <div class="stat-number">${qtd}</div><div class="stat-label">${ICONES[tipo]||'🎁'} ${tipo.replace('_',' ')}</div>
                 </div>`;
             });
             document.getElementById('statsEstoque').innerHTML = statsHTML;
@@ -924,6 +1315,7 @@
             });
             if (secao === 'estoque') mostrarEstoque();
             if (secao === 'utilizados') mostrarUtilizados();
+            if (secao === 'config') mostrarPadroes();
         }
 
         function copiarTexto(texto) {
