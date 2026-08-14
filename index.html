@@ -518,6 +518,7 @@
         let tipoSelecionado = null;
         let giftsSelecionados = [];
         let giftsCompartilhadosBarcode = [];
+        let contadorIds = 0;
 
         const TIPOS = ['CARREFOUR', 'KOPENHAGEN', 'CENTAURO', 'RENNER', 'CACAU_SHOW', 'SHELL', 'CEA', 'IFOOD'];
         const ICONES = { 'CARREFOUR':'🏪', 'KOPENHAGEN':'🍫', 'CENTAURO':'🏋️', 'RENNER':'👗', 'CACAU_SHOW':'🍫', 'SHELL':'🐚', 'CEA':'👕', 'IFOOD':'🍕' };
@@ -530,20 +531,35 @@
             atualizarDropdownTipos();
         }
 
+        function gerarId() {
+            contadorIds++;
+            return `gift-${String(contadorIds).padStart(3, '0')}`;
+        }
+
         function carregarDados() {
             estoque = JSON.parse(localStorage.getItem(STORAGE_ESTOQUE) || '[]');
             utilizados = JSON.parse(localStorage.getItem(STORAGE_UTILIZADOS) || '[]');
             
-            // Garantir que todos os gifts tenham campo dataAdicionado
+            // Normalizar estoque - aceitar ambos formatos
             estoque = estoque.map(g => ({
-                ...g,
+                id: g.id || g.codigo || gerarId(),
+                codigo: g.codigo,
+                tipo: g.tipo,
                 dataAdicionado: g.dataAdicionado || g.data_adicionado || new Date().toISOString()
             }));
             
+            // Normalizar utilizados
             utilizados = utilizados.map(u => ({
-                ...u,
-                dataUtilizado: u.dataUtilizado || u.data_utilizado || new Date().toISOString()
+                id: u.id || u.codigo || gerarId(),
+                codigo: u.codigo,
+                tipo: u.tipo,
+                dataUtilizado: u.dataUtilizado || u.data_utilizado || new Date().toISOString(),
+                nota: u.nota || '',
+                lote: u.lote || ''
             }));
+            
+            // Atualizar contador de IDs
+            contadorIds = estoque.length + utilizados.length;
             
             salvarDados();
         }
@@ -692,6 +708,7 @@
                 if (isCodigoNoEstoque(codigo)) { ignoradosDuplicados++; return; }
 
                 estoque.push({ 
+                    id: gerarId(),
                     codigo, 
                     tipo, 
                     dataAdicionado: new Date().toISOString() 
@@ -720,6 +737,7 @@
                 if (isCodigoNoEstoque(codigo)) { ignoradosDuplicados++; return; }
 
                 estoque.push({ 
+                    id: gerarId(),
                     codigo, 
                     tipo: tipoForcado, 
                     dataAdicionado: new Date().toISOString() 
@@ -791,163 +809,69 @@
         }
 
         // ============ IMPORTAÇÃO/EXPORTAÇÃO ============
-        function formatarDataLocal(data) {
-            if (!data || isNaN(data.getTime())) return '';
-            
-            const ano = data.getFullYear();
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const dia = String(data.getDate()).padStart(2, '0');
-            const hora = String(data.getHours()).padStart(2, '0');
-            const minuto = String(data.getMinutes()).padStart(2, '0');
-            const segundo = String(data.getSeconds()).padStart(2, '0');
-            
-            return `${ano}-${mes}-${dia} ${hora}:${minuto}:${segundo}`;
-        }
-
-        function formatarDataArquivo(data) {
-            const ano = data.getFullYear();
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const dia = String(data.getDate()).padStart(2, '0');
-            
-            return `${ano}-${mes}-${dia}`;
-        }
-
-        function converterDataParaISO(dataString) {
-            if (!dataString) return new Date().toISOString();
-            
-            if (dataString.includes('T') && dataString.includes('Z')) {
-                return dataString;
-            }
-            
-            if (dataString.includes('T')) {
-                const data = new Date(dataString);
-                if (!isNaN(data.getTime())) {
-                    return data.toISOString();
-                }
-            }
-            
-            const match1 = dataString.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
-            if (match1) {
-                const data = new Date(
-                    parseInt(match1[1]),
-                    parseInt(match1[2]) - 1,
-                    parseInt(match1[3]),
-                    parseInt(match1[4]),
-                    parseInt(match1[5]),
-                    parseInt(match1[6])
-                );
-                if (!isNaN(data.getTime())) {
-                    return data.toISOString();
-                }
-            }
-            
-            const match2 = dataString.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2}):(\d{2})/);
-            if (match2) {
-                const data = new Date(
-                    parseInt(match2[3]),
-                    parseInt(match2[2]) - 1,
-                    parseInt(match2[1]),
-                    parseInt(match2[4]),
-                    parseInt(match2[5]),
-                    parseInt(match2[6])
-                );
-                if (!isNaN(data.getTime())) {
-                    return data.toISOString();
-                }
-            }
-            
-            const match3 = dataString.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-            if (match3) {
-                const data = new Date(
-                    parseInt(match3[3]),
-                    parseInt(match3[2]) - 1,
-                    parseInt(match3[1])
-                );
-                if (!isNaN(data.getTime())) {
-                    return data.toISOString();
-                }
-            }
-            
-            return new Date().toISOString();
-        }
-
-        function normalizarDadosImportados(dados) {
-            const dadosNormalizados = { ...dados };
-            
-            if (dadosNormalizados.estoque) {
-                dadosNormalizados.estoque = dadosNormalizados.estoque.map(g => {
-                    const giftNormalizado = { ...g };
-                    
-                    if (giftNormalizado.data_adicionado !== undefined && giftNormalizado.dataAdicionado === undefined) {
-                        giftNormalizado.dataAdicionado = giftNormalizado.data_adicionado;
-                        delete giftNormalizado.data_adicionado;
-                    }
-                    
-                    if (giftNormalizado.dataAdicionado) {
-                        giftNormalizado.dataAdicionado = converterDataParaISO(giftNormalizado.dataAdicionado);
-                    } else {
-                        giftNormalizado.dataAdicionado = new Date().toISOString();
-                    }
-                    
-                    return giftNormalizado;
-                });
-            }
-            
-            if (dadosNormalizados.utilizados) {
-                dadosNormalizados.utilizados = dadosNormalizados.utilizados.map(u => {
-                    const utilizadoNormalizado = { ...u };
-                    
-                    if (utilizadoNormalizado.data_utilizado !== undefined && utilizadoNormalizado.dataUtilizado === undefined) {
-                        utilizadoNormalizado.dataUtilizado = utilizadoNormalizado.data_utilizado;
-                        delete utilizadoNormalizado.data_utilizado;
-                    }
-                    
-                    if (utilizadoNormalizado.dataUtilizado) {
-                        utilizadoNormalizado.dataUtilizado = converterDataParaISO(utilizadoNormalizado.dataUtilizado);
-                    } else {
-                        utilizadoNormalizado.dataUtilizado = new Date().toISOString();
-                    }
-                    
-                    return utilizadoNormalizado;
-                });
-            }
-            
-            return dadosNormalizados;
-        }
-
         function exportarDados() {
             const dados = {
-                versao: '1.0',
-                data_exportacao: formatarDataLocal(new Date()),
+                versao: '2.0',
+                dataExportacao: new Date().toISOString(),
                 estoque: estoque.map(g => ({
+                    id: g.id,
                     codigo: g.codigo,
                     tipo: g.tipo,
-                    data_adicionado: formatarDataLocal(new Date(g.dataAdicionado))
+                    dataAdicionado: g.dataAdicionado
                 })),
                 utilizados: utilizados.map(u => ({
+                    id: u.id,
                     codigo: u.codigo,
                     tipo: u.tipo,
-                    data_utilizado: formatarDataLocal(new Date(u.dataUtilizado)),
-                    nota: u.nota,
-                    lote: u.lote
+                    dataUtilizado: u.dataUtilizado,
+                    nota: u.nota || '',
+                    lote: u.lote || ''
                 })),
                 padroes: padroesCustomizados
             };
             
             const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
-            baixarBlob(blob, `gifts_backup_${formatarDataArquivo(new Date())}.json`);
+            const dataArquivo = new Date().toISOString().split('T')[0];
+            baixarBlob(blob, `gifts_backup_${dataArquivo}.json`);
             mostrarToast('💾 Dados exportados!');
         }
 
         function exportarCSV() {
             let csv = 'Codigo,Tipo,Data\n';
             estoque.forEach(g => {
-                csv += `"${g.codigo}","${g.tipo}","${formatarDataLocal(new Date(g.dataAdicionado))}"\n`;
+                csv += `"${g.codigo}","${g.tipo}","${g.dataAdicionado}"\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
-            baixarBlob(blob, `gifts_estoque_${formatarDataArquivo(new Date())}.csv`);
+            const dataArquivo = new Date().toISOString().split('T')[0];
+            baixarBlob(blob, `gifts_estoque_${dataArquivo}.csv`);
             mostrarToast('📄 CSV exportado!');
+        }
+
+        function normalizarDadosImportados(dados) {
+            const dadosNormalizados = { ...dados };
+            
+            if (dadosNormalizados.estoque) {
+                dadosNormalizados.estoque = dadosNormalizados.estoque.map(g => ({
+                    id: g.id || gerarId(),
+                    codigo: g.codigo,
+                    tipo: g.tipo,
+                    dataAdicionado: g.dataAdicionado || g.data_adicionado || new Date().toISOString()
+                }));
+            }
+            
+            if (dadosNormalizados.utilizados) {
+                dadosNormalizados.utilizados = dadosNormalizados.utilizados.map(u => ({
+                    id: u.id || gerarId(),
+                    codigo: u.codigo,
+                    tipo: u.tipo,
+                    dataUtilizado: u.dataUtilizado || u.data_utilizado || new Date().toISOString(),
+                    nota: u.nota || '',
+                    lote: u.lote || ''
+                }));
+            }
+            
+            return dadosNormalizados;
         }
 
         function importarDados(event) {
@@ -972,6 +896,8 @@
                         if (dados.padroes) {
                             padroesCustomizados = dados.padroes;
                         }
+                        
+                        contadorIds = estoque.length + utilizados.length;
                         
                         salvarDados();
                         salvarPadroes();
@@ -1292,13 +1218,14 @@
             
             giftsSelecionados.forEach(g => {
                 utilizados.push({
+                    id: g.id,
                     codigo: g.codigo,
                     tipo: g.tipo,
                     dataUtilizado: new Date().toISOString(),
                     nota: nota,
                     lote: lote
                 });
-                const idx = estoque.findIndex(e => e.codigo === g.codigo);
+                const idx = estoque.findIndex(e => e.id === g.id);
                 if (idx >= 0) estoque.splice(idx, 1);
             });
             
